@@ -166,7 +166,20 @@ fun ChatInputBar(
 
                         BasicTextField(
                             value = messageText,
-                            onValueChange = onMessageChange,
+                            onValueChange = { newVal ->
+                                if (newVal.endsWith("  ")) {
+                                    onToggleSender()
+                                    onMessageChange(newVal.dropLast(2))
+                                } else if (messageText.endsWith(" ") && (newVal == messageText.dropLast(1) + ". " || newVal == messageText + ". ")) {
+                                    onToggleSender()
+                                    onMessageChange(messageText.trimEnd())
+                                } else if (messageText.isEmpty() && (newVal == "  " || newVal == ". ")) {
+                                    onToggleSender()
+                                    onMessageChange("")
+                                } else {
+                                    onMessageChange(newVal)
+                                }
+                            },
                             singleLine = true,
                             textStyle = TextStyle(
                                 color = Color.White,
