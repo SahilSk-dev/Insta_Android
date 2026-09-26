@@ -1,6 +1,6 @@
 {
   "name": "Direct Chat",
-  "description": "Instagram Direct Message chat experience with Sahil Sk, featuring real-time messaging, safety tips, profile details, and media sharing.",
+  "description": "Instagram Direct Chat with customizable profile, messages, and theme",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

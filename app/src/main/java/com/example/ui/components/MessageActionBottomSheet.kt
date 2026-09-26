@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -40,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,7 +56,7 @@ import com.example.ui.theme.InstagramSubtext
 @Composable
 fun MessageActionBottomSheet(
     message: ChatMessageEntity,
-    onEditMessage: (id: String, newText: String, newTimestamp: String, isFromMe: Boolean) -> Unit,
+    onEditMessage: (id: String, newText: String, newTimestamp: String, isFromMe: Boolean, theme: String) -> Unit,
     onDeleteMessage: (id: String) -> Unit,
     onReactEmoji: (String) -> Unit,
     onDismiss: () -> Unit
@@ -67,6 +67,7 @@ fun MessageActionBottomSheet(
     var editText by remember { mutableStateOf(message.text) }
     var editTimestamp by remember { mutableStateOf(message.timestamp) }
     var editIsFromMe by remember { mutableStateOf(message.isFromMe) }
+    var selectedTheme by remember { mutableStateOf(message.theme) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -81,7 +82,7 @@ fun MessageActionBottomSheet(
                 .padding(bottom = 36.dp)
         ) {
             if (!isEditingMode) {
-                // Quick Reaction Bar
+                // Quick Reaction Bar with System Emojis
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -93,20 +94,71 @@ fun MessageActionBottomSheet(
                 ) {
                     val emojis = listOf("❤️", "😂", "🔥", "😮", "😢", "👍")
                     emojis.forEach { emoji ->
-                        Text(
-                            text = emoji,
-                            fontSize = 28.sp,
+                        Box(
                             modifier = Modifier
                                 .clickable {
                                     onReactEmoji(emoji)
                                     onDismiss()
                                 }
-                                .padding(4.dp)
-                        )
+                                .padding(4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = emoji,
+                                fontSize = 28.sp,
+                                fontFamily = FontFamily.Default
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Quick Apply / Remove Lyrics Theme & Overlay
+                Text(
+                    text = "Lyrics / Overlay Effects (Projapoti, Hearts, Neon):",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = FontFamily.Default
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val themes = listOf(
+                        "CLASSIC" to "Normal",
+                        "OBSIDIAN_HEART" to "❤️‍🔥 Hearts",
+                        "MIDNIGHT_BUTTERFLY" to "🦋 Butterfly",
+                        "NEON_CYBER" to "⚡ Cyber",
+                        "GOLDEN_LUXE" to "✨ Luxe"
+                    )
+                    themes.forEach { (thmKey, thmLabel) ->
+                        val isSelected = message.theme == thmKey
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) InstagramBlue else InstagramInputBg)
+                                .clickable {
+                                    onEditMessage(message.id, message.text, message.timestamp, message.isFromMe, thmKey)
+                                    onDismiss()
+                                }
+                                .padding(horizontal = 8.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = thmLabel,
+                                color = if (isSelected) Color.White else InstagramSubtext,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Message summary preview
                 Box(
@@ -129,66 +181,84 @@ fun MessageActionBottomSheet(
                                 text = if (message.isFromMe) "You (Me)" else "Received",
                                 color = if (message.isFromMe) InstagramBubblePurple else InstagramBlue,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Default
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = message.timestamp,
                                 color = InstagramSubtext,
-                                fontSize = 11.sp
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Default
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = message.text.ifEmpty { "[${message.type}]" },
                             color = Color.White,
-                            fontSize = 14.sp
+                            fontSize = 14.sp,
+                            fontFamily = FontFamily.Default
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Actions List
-                ActionRow(
+                // Action: Edit message
+                ActionRowItem(
                     icon = Icons.Default.Edit,
-                    label = "Edit Message",
-                    tint = Color.White,
-                    onClick = { isEditingMode = true },
-                    tag = "action_edit_message"
+                    label = "Edit Message Content",
+                    textColor = Color.White,
+                    onClick = { isEditingMode = true }
                 )
 
                 HorizontalDivider(color = InstagramDivider, thickness = 0.5.dp)
 
-                ActionRow(
+                // Action: Switch sender (Me <-> Them)
+                ActionRowItem(
+                    icon = Icons.Default.SwapHoriz,
+                    label = if (message.isFromMe) "Change Sender to Sahil Sk" else "Change Sender to You",
+                    textColor = Color.White,
+                    onClick = {
+                        onEditMessage(message.id, message.text, message.timestamp, !message.isFromMe, message.theme)
+                        onDismiss()
+                    }
+                )
+
+                HorizontalDivider(color = InstagramDivider, thickness = 0.5.dp)
+
+                // Action: Delete message
+                ActionRowItem(
                     icon = Icons.Default.Delete,
-                    label = "Remove / Delete Message",
-                    tint = InstagramRed,
+                    label = "Unsend / Delete Message",
+                    textColor = InstagramRed,
                     onClick = {
                         onDeleteMessage(message.id)
                         onDismiss()
-                    },
-                    tag = "action_delete_message"
+                    }
                 )
+
             } else {
-                // Editing form
+                // Inline editing mode inside sheet
                 Text(
                     text = "Edit Message",
                     color = Color.White,
                     fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Default
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                Text(
-                    text = "Message Text",
-                    color = InstagramSubtext,
-                    fontSize = 12.sp
-                )
                 OutlinedTextField(
                     value = editText,
                     onValueChange = { editText = it },
+                    label = { Text("Message Text", fontFamily = FontFamily.Default) },
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontFamily = FontFamily.Default
+                    ),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
@@ -197,85 +267,97 @@ fun MessageActionBottomSheet(
                         focusedContainerColor = InstagramInputBg,
                         unfocusedContainerColor = InstagramInputBg
                     ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("modal_edit_msg_text")
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Timestamp",
-                    color = InstagramSubtext,
-                    fontSize = 12.sp
-                )
-                OutlinedTextField(
-                    value = editTimestamp,
-                    onValueChange = { editTimestamp = it },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = InstagramBlue,
-                        unfocusedBorderColor = InstagramDivider,
-                        focusedContainerColor = InstagramInputBg,
-                        unfocusedContainerColor = InstagramInputBg
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("modal_edit_msg_timestamp")
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Switch sender option
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { editIsFromMe = !editIsFromMe }
-                        .padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SwapHoriz,
-                        contentDescription = "Switch sender",
-                        tint = InstagramBlue
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (editIsFromMe) "Sender: Me (Purple)" else "Sender: Sahil Sk (Dark)",
+                OutlinedTextField(
+                    value = editTimestamp,
+                    onValueChange = { editTimestamp = it },
+                    label = { Text("Timestamp (e.g. 12:42 PM)", fontFamily = FontFamily.Default) },
+                    textStyle = androidx.compose.ui.text.TextStyle(
                         color = Color.White,
-                        fontSize = 13.sp
-                    )
-                }
+                        fontSize = 14.sp,
+                        fontFamily = FontFamily.Default
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = InstagramBlue,
+                        unfocusedBorderColor = InstagramDivider,
+                        focusedContainerColor = InstagramInputBg,
+                        unfocusedContainerColor = InstagramInputBg
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Theme / Overlay Effect:",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = FontFamily.Default
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val themes = listOf(
+                        "CLASSIC" to "Normal",
+                        "OBSIDIAN_HEART" to "❤️‍🔥 Hearts",
+                        "MIDNIGHT_BUTTERFLY" to "🦋 Butterfly",
+                        "NEON_CYBER" to "⚡ Cyber",
+                        "GOLDEN_LUXE" to "✨ Luxe"
+                    )
+                    themes.forEach { (thmKey, thmLabel) ->
+                        val isSelected = selectedTheme == thmKey
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) InstagramBlue else InstagramInputBg)
+                                .clickable { selectedTheme = thmKey }
+                                .padding(horizontal = 8.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = thmLabel,
+                                color = if (isSelected) Color.White else InstagramSubtext,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
                 ) {
                     Button(
                         onClick = { isEditingMode = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = InstagramInputBg),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
                     ) {
-                        Text("Cancel", color = Color.White)
+                        Text("Cancel", color = InstagramSubtext, fontFamily = FontFamily.Default)
                     }
+
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     Button(
                         onClick = {
-                            onEditMessage(message.id, editText, editTimestamp, editIsFromMe)
+                            onEditMessage(message.id, editText, editTimestamp, editIsFromMe, selectedTheme)
                             onDismiss()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = InstagramBlue),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Save Changes", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Save Changes", color = Color.White, fontFamily = FontFamily.Default)
                     }
                 }
             }
@@ -284,33 +366,32 @@ fun MessageActionBottomSheet(
 }
 
 @Composable
-private fun ActionRow(
+private fun ActionRowItem(
     icon: ImageVector,
     label: String,
-    tint: Color,
-    onClick: () -> Unit,
-    tag: String
+    textColor: Color,
+    onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp)
-            .testTag(tag),
+            .padding(vertical = 12.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = tint,
-            modifier = Modifier.size(22.dp)
+            tint = textColor,
+            modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(14.dp))
         Text(
             text = label,
-            color = tint,
+            color = textColor,
             fontSize = 15.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            fontFamily = FontFamily.Default
         )
     }
 }

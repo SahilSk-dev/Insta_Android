@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -26,11 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,8 +47,9 @@ fun ChatTopBar(
     onProfileClick: () -> Unit,
     onChangeAvatar: () -> Unit,
     onVideoCallClick: () -> Unit,
-    onDetailsClick: () -> Unit,
+    onTagCaptureScreenshot: () -> Unit,
     onOpenBackend: () -> Unit,
+    onClearChatClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -96,79 +97,97 @@ fun ChatTopBar(
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Mini avatar with 8-sided rounded badge
-                    Image(
-                        painter = painterResource(id = getAvatarResId(avatarName)),
+                    // Pure round mini avatar
+                    RoundAvatar(
+                        avatarName = avatarName,
                         contentDescription = name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(OctagonBadgeShape)
-                            .testTag("top_avatar")
+                        size = 38.dp,
+                        modifier = Modifier.testTag("top_avatar")
                     )
 
                     Spacer(modifier = Modifier.width(10.dp))
 
                     Column {
-                        Text(
-                            text = name,
-                            color = Color.White,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            lineHeight = 18.sp
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = name,
+                                color = Color.White,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Default,
+                                maxLines = 1,
+                                lineHeight = 18.sp
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = InstagramSubtext,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                         Text(
                             text = handle,
                             color = InstagramSubtext,
                             fontSize = 12.sp,
+                            fontFamily = FontFamily.Default,
                             maxLines = 1,
                             lineHeight = 14.sp
                         )
                     }
                 }
 
-                // Smiley speech bubble icon - Tapping this opens the Backend Settings!
-                IconButton(
-                    onClick = onOpenBackend,
-                    modifier = Modifier
-                        .size(42.dp)
-                        .testTag("top_reactions_button")
-                ) {
-                    InstagramSmileyBubbleIcon(
-                        tint = Color.White,
-                        size = 23.dp
-                    )
-                }
-
-                // Video call icon
+                // 1. Audio Call Icon
                 IconButton(
                     onClick = onVideoCallClick,
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(40.dp)
+                        .testTag("top_audio_call_button")
+                ) {
+                    InstagramPhoneCallIcon(
+                        tint = Color.White,
+                        size = 22.dp
+                    )
+                }
+
+                // 2. Video Call Icon
+                IconButton(
+                    onClick = onVideoCallClick,
+                    modifier = Modifier
+                        .size(40.dp)
                         .testTag("top_video_call_button")
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Videocam,
                         contentDescription = "Video Call",
                         tint = Color.White,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
 
-                // Tag / Details icon - also opens settings or details
-                IconButton(
-                    onClick = onDetailsClick,
+                // 3. Info (i) / Details Icon - Tap: Open Backend, Long-press: Screenshot Dialog
+                Box(
                     modifier = Modifier
-                        .size(42.dp)
-                        .testTag("top_tag_details_button")
+                        .size(40.dp)
+                        .combinedClickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = ripple(bounded = false, radius = 20.dp),
+                            onClick = onOpenBackend,
+                            onLongClick = onTagCaptureScreenshot
+                        )
+                        .testTag("top_info_button"),
+                    contentAlignment = Alignment.Center
                 ) {
-                    InstagramTagIcon(
+                    InstagramInfoIcon(
                         tint = Color.White,
                         size = 23.dp
                     )
                 }
             }
         }
+        HorizontalDivider(
+            color = Color(0xFF1A1A1A),
+            thickness = 0.5.dp
+        )
     }
 }

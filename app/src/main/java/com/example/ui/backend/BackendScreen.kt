@@ -1,6 +1,10 @@
 package com.example.ui.backend
 
+import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -65,15 +70,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.ChatMessageEntity
 import com.example.data.local.ChatProfileEntity
-import com.example.ui.components.OctagonBadgeShape
+import com.example.ui.components.ClearChatConfirmDialog
+import com.example.ui.components.RoundAvatar
 import com.example.ui.components.availableAvatars
 import com.example.ui.theme.InstagramBlack
 import com.example.ui.theme.InstagramBlue
@@ -86,6 +94,8 @@ import com.example.ui.theme.InstagramPlaceholder
 import com.example.ui.theme.InstagramRed
 import com.example.ui.theme.InstagramSubtext
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,9 +103,10 @@ fun BackendScreen(
     currentProfile: ChatProfileEntity,
     messagesList: List<ChatMessageEntity>,
     onSaveProfile: (ChatProfileEntity) -> Unit,
-    onAddMessage: (text: String, isFromMe: Boolean, timestamp: String) -> Unit,
-    onEditMessage: (id: String, newText: String, newTimestamp: String, isFromMe: Boolean) -> Unit,
+    onAddMessage: (text: String, isFromMe: Boolean, timestamp: String, theme: String) -> Unit,
+    onEditMessage: (id: String, newText: String, newTimestamp: String, isFromMe: Boolean, theme: String) -> Unit,
     onDeleteMessage: (id: String) -> Unit,
+    onClearAllMessages: () -> Unit,
     onResetDefaults: () -> Unit,
     onBackToDM: () -> Unit
 ) {
@@ -103,6 +114,7 @@ fun BackendScreen(
         onBackToDM()
     }
 
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Profile Details, 1: Messages Editor
@@ -122,16 +134,41 @@ fun BackendScreen(
     var isBlocked by remember(currentProfile) { mutableStateOf(currentProfile.isBlocked) }
     var avatarName by remember(currentProfile) { mutableStateOf(currentProfile.avatarName) }
 
+    // Photo picker for custom DP upload from gallery
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val file = File(context.filesDir, "custom_dp_${System.currentTimeMillis()}.jpg")
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(file).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                avatarName = file.absolutePath
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("Custom DP selected!")
+                }
+            } catch (e: Exception) {
+                avatarName = uri.toString()
+            }
+        }
+    }
+
     // New Message form state
     var newMsgText by remember { mutableStateOf("") }
     var newMsgSenderMe by remember { mutableStateOf(true) }
     var newMsgTimestamp by remember { mutableStateOf("12:42 PM") }
+    var newMsgTheme by remember { mutableStateOf("CLASSIC") }
 
     // Edit Message dialog state
     var editingMessageId by remember { mutableStateOf<String?>(null) }
     var editingMsgText by remember { mutableStateOf("") }
     var editingMsgTimestamp by remember { mutableStateOf("") }
     var editingMsgIsMe by remember { mutableStateOf(true) }
+    var editingMsgTheme by remember { mutableStateOf("CLASSIC") }
+    var showClearChatDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -164,12 +201,14 @@ fun BackendScreen(
                             text = "DM Backend Editor",
                             color = Color.White,
                             fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Default
                         )
                         Text(
                             text = "Edit user, followers & chat interface",
                             color = InstagramSubtext,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Default
                         )
                     }
 
@@ -205,7 +244,7 @@ fun BackendScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Live DM", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(text = "Live DM", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Default)
                     }
                 }
 
@@ -229,7 +268,8 @@ fun BackendScreen(
                         text = {
                             Text(
                                 "Profile & Header",
-                                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                                fontFamily = FontFamily.Default
                             )
                         },
                         modifier = Modifier.testTag("tab_profile_details")
@@ -240,7 +280,8 @@ fun BackendScreen(
                         text = {
                             Text(
                                 "Chat Messages",
-                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                                fontFamily = FontFamily.Default
                             )
                         },
                         modifier = Modifier.testTag("tab_messages_manager")
@@ -266,6 +307,7 @@ fun BackendScreen(
                     color = Color.White,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Default,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
@@ -352,13 +394,46 @@ fun BackendScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "Profile Picture Preset",
+                    text = "Profile Picture (Round DP)",
                     color = Color.White,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Default
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
+
+                // Custom DP Upload Action
+                Button(
+                    onClick = {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = InstagramInputBg),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .testTag("backend_upload_dp_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AddPhotoAlternate,
+                        contentDescription = null,
+                        tint = InstagramBlue,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Upload Custom DP from Gallery",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = FontFamily.Default
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -383,12 +458,10 @@ fun BackendScreen(
                                     .padding(8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Image(
-                                    painter = painterResource(id = option.resId),
+                                RoundAvatar(
+                                    avatarName = option.id,
                                     contentDescription = option.name,
-                                    modifier = Modifier
-                                        .size(50.dp)
-                                        .clip(OctagonBadgeShape)
+                                    size = 48.dp
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
@@ -396,6 +469,7 @@ fun BackendScreen(
                                     color = if (isSelected) InstagramBlue else Color.White,
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontFamily = FontFamily.Default,
                                     maxLines = 1,
                                     textAlign = TextAlign.Center
                                 )
@@ -419,8 +493,8 @@ fun BackendScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Auto Reply from User", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                Text("Simulate intelligent replies when you message", color = InstagramSubtext, fontSize = 12.sp)
+                                Text("Auto Reply from User", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Default)
+                                Text("Simulate intelligent replies when you message", color = InstagramSubtext, fontSize = 12.sp, fontFamily = FontFamily.Default)
                             }
                             Switch(
                                 checked = autoReplyEnabled,
@@ -437,8 +511,8 @@ fun BackendScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Block md.sahil_sk_", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                Text("Toggle block status in DM interface", color = InstagramSubtext, fontSize = 12.sp)
+                                Text("Block md.sahil_sk_", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Default)
+                                Text("Toggle block status in DM interface", color = InstagramSubtext, fontSize = 12.sp, fontFamily = FontFamily.Default)
                             }
                             Switch(
                                 checked = isBlocked,
@@ -488,7 +562,8 @@ fun BackendScreen(
                         text = "Save & Apply to DM",
                         color = Color.White,
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Default
                     )
                 }
 
@@ -499,6 +574,7 @@ fun BackendScreen(
                     color = Color.White,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Default,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
@@ -512,7 +588,8 @@ fun BackendScreen(
                             text = "Sender:",
                             color = Color.White,
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = FontFamily.Default
                         )
 
                         Row(
@@ -530,7 +607,7 @@ fun BackendScreen(
                                     onClick = { newMsgSenderMe = true },
                                     colors = RadioButtonDefaults.colors(selectedColor = InstagramBubblePurple)
                                 )
-                                Text("Me (Purple)", color = Color.White, fontSize = 13.sp)
+                                Text("Me (Gradient)", color = Color.White, fontSize = 13.sp, fontFamily = FontFamily.Default)
                             }
 
                             Row(
@@ -542,7 +619,7 @@ fun BackendScreen(
                                     onClick = { newMsgSenderMe = false },
                                     colors = RadioButtonDefaults.colors(selectedColor = InstagramBlue)
                                 )
-                                Text("Sahil Sk (Dark)", color = Color.White, fontSize = 13.sp)
+                                Text("Sahil Sk (Dark)", color = Color.White, fontSize = 13.sp, fontFamily = FontFamily.Default)
                             }
                         }
 
@@ -560,12 +637,54 @@ fun BackendScreen(
                             tag = "input_new_message_timestamp"
                         )
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = "Aesthetic Lyrics Theme / Overlay:",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = FontFamily.Default
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val themes = listOf(
+                                "CLASSIC" to "Normal",
+                                "OBSIDIAN_HEART" to "❤️‍🔥 Obsidian",
+                                "MIDNIGHT_BUTTERFLY" to "🦋 Butterfly",
+                                "NEON_CYBER" to "⚡ Cyber",
+                                "GOLDEN_LUXE" to "✨ Luxe"
+                            )
+                            themes.forEach { (thmKey, thmLabel) ->
+                                val isSelected = newMsgTheme == thmKey
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) InstagramBlue else InstagramInputBg)
+                                        .clickable { newMsgTheme = thmKey }
+                                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = thmLabel,
+                                        color = if (isSelected) Color.White else InstagramSubtext,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Button(
                             onClick = {
                                 if (newMsgText.isNotBlank()) {
-                                    onAddMessage(newMsgText.trim(), newMsgSenderMe, newMsgTimestamp)
+                                    onAddMessage(newMsgText.trim(), newMsgSenderMe, newMsgTimestamp, newMsgTheme)
                                     newMsgText = ""
                                     coroutineScope.launch {
                                         snackbarHostState.showSnackbar("Message added to DM!")
@@ -581,20 +700,41 @@ fun BackendScreen(
                         ) {
                             Icon(imageVector = Icons.Default.Add, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Add to Conversation", fontWeight = FontWeight.Bold)
+                            Text("Add to Conversation", fontWeight = FontWeight.Bold, fontFamily = FontFamily.Default)
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                Text(
-                    text = "Existing Messages (${messagesList.size})",
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Existing Messages (${messagesList.size})",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Default
+                    )
+
+                    if (messagesList.isNotEmpty()) {
+                        Text(
+                            text = "Clear All",
+                            color = InstagramRed,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Default,
+                            modifier = Modifier
+                                .clickable { showClearChatDialog = true }
+                                .padding(4.dp)
+                        )
+                    }
+                }
 
                 messagesList.forEach { msg ->
                     Card(
@@ -625,20 +765,23 @@ fun BackendScreen(
                                         text = if (msg.isFromMe) "You (Me)" else currentProfile.name,
                                         color = if (msg.isFromMe) InstagramBubblePurple else InstagramBlue,
                                         fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Default
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = msg.timestamp,
                                         color = InstagramPlaceholder,
-                                        fontSize = 11.sp
+                                        fontSize = 11.sp,
+                                        fontFamily = FontFamily.Default
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = msg.text.ifEmpty { "[${msg.type}]" },
                                     color = Color.White,
-                                    fontSize = 14.sp
+                                    fontSize = 14.sp,
+                                    fontFamily = FontFamily.Default
                                 )
                             }
 
@@ -649,6 +792,7 @@ fun BackendScreen(
                                     editingMsgText = msg.text
                                     editingMsgTimestamp = msg.timestamp
                                     editingMsgIsMe = msg.isFromMe
+                                    editingMsgTheme = msg.theme
                                 },
                                 modifier = Modifier.size(36.dp)
                             ) {
@@ -699,7 +843,8 @@ fun BackendScreen(
                         text = "Edit Message",
                         color = Color.White,
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Default
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -718,6 +863,50 @@ fun BackendScreen(
                         tag = "edit_msg_timestamp"
                     )
 
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = "Theme / Overlay:",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = FontFamily.Default
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val themes = listOf(
+                            "CLASSIC" to "Normal",
+                            "OBSIDIAN_HEART" to "❤️‍🔥 Obsidian",
+                            "MIDNIGHT_BUTTERFLY" to "🦋 Butterfly",
+                            "NEON_CYBER" to "⚡ Cyber",
+                            "GOLDEN_LUXE" to "✨ Luxe"
+                        )
+                        themes.forEach { (thmKey, thmLabel) ->
+                            val isSelected = editingMsgTheme == thmKey
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) InstagramBlue else InstagramInputBg)
+                                    .clickable { editingMsgTheme = thmKey }
+                                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = thmLabel,
+                                    color = if (isSelected) Color.White else InstagramSubtext,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
@@ -726,13 +915,13 @@ fun BackendScreen(
                             onClick = { editingMessageId = null },
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
                         ) {
-                            Text("Cancel", color = InstagramSubtext)
+                            Text("Cancel", color = InstagramSubtext, fontFamily = FontFamily.Default)
                         }
 
                         Button(
                             onClick = {
                                 editingMessageId?.let { id ->
-                                    onEditMessage(id, editingMsgText, editingMsgTimestamp, editingMsgIsMe)
+                                    onEditMessage(id, editingMsgText, editingMsgTimestamp, editingMsgIsMe, editingMsgTheme)
                                 }
                                 editingMessageId = null
                                 coroutineScope.launch {
@@ -741,11 +930,25 @@ fun BackendScreen(
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = InstagramBlue)
                         ) {
-                            Text("Save")
+                            Text("Save", fontFamily = FontFamily.Default)
                         }
                     }
                 }
             }
+        }
+
+        // Clear Chat Confirmation Dialog
+        if (showClearChatDialog) {
+            ClearChatConfirmDialog(
+                handle = currentProfile.handle,
+                onConfirmClear = {
+                    onClearAllMessages()
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("All messages cleared!")
+                    }
+                },
+                onDismiss = { showClearChatDialog = false }
+            )
         }
     }
 }
@@ -764,12 +967,17 @@ private fun BackendTextField(
             color = InstagramSubtext,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
+            fontFamily = FontFamily.Default,
             modifier = Modifier.padding(bottom = 2.dp)
         )
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = singleLine,
+            textStyle = androidx.compose.ui.text.TextStyle(
+                fontFamily = FontFamily.Default,
+                fontSize = 14.sp
+            ),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,

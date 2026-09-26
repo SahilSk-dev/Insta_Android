@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,7 +79,8 @@ fun UserProfileBottomSheet(
                     text = profile.handle,
                     color = Color.White,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Default
                 )
             }
 
@@ -89,14 +91,11 @@ fun UserProfileBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Octagon avatar
-                Image(
-                    painter = painterResource(id = getAvatarResId(profile.avatarName)),
+                // Pure Round avatar
+                RoundAvatar(
+                    avatarName = profile.avatarName,
                     contentDescription = "Profile picture",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(OctagonBadgeShape)
+                    size = 80.dp
                 )
 
                 Spacer(modifier = Modifier.width(20.dp))
@@ -118,19 +117,22 @@ fun UserProfileBottomSheet(
                 text = profile.name,
                 color = Color.White,
                 fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Default
             )
             Text(
                 text = profile.bio,
                 color = Color.White,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
+                fontFamily = FontFamily.Default,
                 modifier = Modifier.padding(top = 2.dp)
             )
             Text(
                 text = profile.followsYouText,
                 color = InstagramSubtext,
                 fontSize = 12.sp,
+                fontFamily = FontFamily.Default,
                 modifier = Modifier.padding(top = 4.dp)
             )
 
@@ -156,7 +158,8 @@ fun UserProfileBottomSheet(
                         text = if (isFollowing) "Following" else "Follow back",
                         color = Color.White,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = FontFamily.Default
                     )
                 }
 
@@ -176,7 +179,8 @@ fun UserProfileBottomSheet(
                         text = "Message",
                         color = Color.White,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = FontFamily.Default
                     )
                 }
             }
@@ -231,12 +235,14 @@ private fun ProfileStatItem(
             text = count,
             color = Color.White,
             fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Default
         )
         Text(
             text = label,
             color = Color.White,
-            fontSize = 12.sp
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Default
         )
     }
 }

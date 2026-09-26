@@ -12,5 +12,6 @@ data class ChatMessageEntity(
     val type: String = "TEXT", // "TEXT", "IMAGE", "AUDIO", "STICKER"
     val imageResName: String? = null,
     val audioDuration: String? = null,
+    val theme: String = "CLASSIC", // "CLASSIC", "OBSIDIAN_HEART", "MIDNIGHT_BUTTERFLY", "NEON_CYBER", "GOLDEN_LUXE"
     val orderIndex: Long = System.currentTimeMillis()
 )

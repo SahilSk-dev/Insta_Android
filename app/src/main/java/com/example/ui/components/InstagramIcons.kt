@@ -185,3 +185,77 @@ fun InstagramSmileyBubbleIcon(
         )
     }
 }
+
+@Composable
+fun InstagramPhoneCallIcon(
+    modifier: Modifier = Modifier,
+    tint: Color = Color.White,
+    size: Dp = 24.dp
+) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val strokeWidth = 1.8.dp.toPx()
+
+        // Clean phone handset outline
+        val phonePath = Path().apply {
+            moveTo(w * 0.88f, h * 0.72f)
+            lineTo(w * 0.88f, h * 0.86f)
+            cubicTo(w * 0.88f, h * 0.92f, w * 0.82f, h * 0.96f, w * 0.75f, h * 0.95f)
+            cubicTo(w * 0.42f, h * 0.92f, w * 0.16f, h * 0.68f, w * 0.08f, h * 0.35f)
+            cubicTo(w * 0.06f, h * 0.28f, w * 0.11f, h * 0.22f, w * 0.17f, h * 0.22f)
+            lineTo(w * 0.31f, h * 0.22f)
+            cubicTo(w * 0.36f, h * 0.22f, w * 0.40f, h * 0.26f, w * 0.42f, h * 0.31f)
+            lineTo(w * 0.46f, h * 0.45f)
+            cubicTo(w * 0.48f, h * 0.50f, w * 0.46f, h * 0.55f, w * 0.42f, h * 0.59f)
+            lineTo(w * 0.36f, h * 0.65f)
+            cubicTo(w * 0.42f, h * 0.75f, w * 0.50f, h * 0.83f, w * 0.60f, h * 0.89f)
+            lineTo(w * 0.66f, h * 0.83f)
+            cubicTo(w * 0.70f, h * 0.79f, w * 0.75f, h * 0.77f, w * 0.80f, h * 0.79f)
+            lineTo(w * 0.84f, h * 0.81f)
+            close()
+        }
+        drawPath(
+            path = phonePath,
+            color = tint,
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+    }
+}
+
+@Composable
+fun InstagramInfoIcon(
+    modifier: Modifier = Modifier,
+    tint: Color = Color.White,
+    size: Dp = 24.dp
+) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val strokeWidth = 1.8.dp.toPx()
+
+        // Outer circle
+        drawCircle(
+            color = tint,
+            radius = w * 0.42f,
+            center = Offset(w * 0.5f, h * 0.5f),
+            style = Stroke(width = strokeWidth)
+        )
+
+        // Dot above i
+        drawCircle(
+            color = tint,
+            radius = w * 0.038f,
+            center = Offset(w * 0.5f, h * 0.34f)
+        )
+
+        // Vertical bar of i
+        drawLine(
+            color = tint,
+            start = Offset(w * 0.5f, h * 0.46f),
+            end = Offset(w * 0.5f, h * 0.68f),
+            strokeWidth = strokeWidth * 1.1f,
+            cap = StrokeCap.Round
+        )
+    }
+}

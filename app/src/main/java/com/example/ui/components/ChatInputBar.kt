@@ -1,9 +1,11 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,18 +15,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Mic
-import androidx.compose.material.icons.outlined.SentimentSatisfiedAlt
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -53,22 +54,32 @@ fun ChatInputBar(
     messageText: String,
     onMessageChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    isFromMe: Boolean = true,
+    onToggleSender: () -> Unit = {},
+    sahilAvatar: String = "sahil_avatar",
     onCameraClick: () -> Unit,
     onMicClick: () -> Unit,
     onGalleryClick: () -> Unit,
-    onStickersClick: () -> Unit,
     onPlusClick: () -> Unit,
     isBlocked: Boolean = false,
     onUnblockClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .background(InstagramBlack)
             .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
+        HorizontalDivider(
+            color = Color(0xFF141414),
+            thickness = 0.5.dp
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
         if (isBlocked) {
             // Blocked state bar
             Row(
@@ -84,6 +95,7 @@ fun ChatInputBar(
                     text = stringResource(id = R.string.blocked_message),
                     color = InstagramPlaceholder,
                     fontSize = 14.sp,
+                    fontFamily = FontFamily.Default,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
@@ -91,6 +103,7 @@ fun ChatInputBar(
                     color = InstagramBlue,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Default,
                     modifier = Modifier
                         .clickable(onClick = onUnblockClick)
                         .padding(8.dp)
@@ -145,7 +158,8 @@ fun ChatInputBar(
                             Text(
                                 text = stringResource(id = R.string.message_placeholder),
                                 color = InstagramPlaceholder,
-                                fontSize = 15.sp
+                                fontSize = 15.sp,
+                                fontFamily = FontFamily.Default
                             )
                         }
 
@@ -155,7 +169,8 @@ fun ChatInputBar(
                             singleLine = true,
                             textStyle = TextStyle(
                                 color = Color.White,
-                                fontSize = 15.sp
+                                fontSize = 15.sp,
+                                fontFamily = FontFamily.Default
                             ),
                             cursorBrush = SolidColor(InstagramBlue),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -167,19 +182,66 @@ fun ChatInputBar(
                     }
 
                     if (messageText.isNotBlank()) {
+                        // 1-Tap Sender Switcher Badge matching web app
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (isFromMe) InstagramBlue.copy(alpha = 0.22f)
+                                    else Color.White.copy(alpha = 0.12f)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isFromMe) InstagramBlue else Color(0xFF8E8E93),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = onToggleSender
+                                )
+                                .padding(horizontal = 7.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isFromMe) {
+                                Text(
+                                    text = "👤 You",
+                                    color = Color.White,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontFamily = FontFamily.Default
+                                )
+                            } else {
+                                RoundAvatar(
+                                    avatarName = sahilAvatar,
+                                    contentDescription = "Sahil",
+                                    size = 14.dp
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "Sahil",
+                                    color = Color.White,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontFamily = FontFamily.Default
+                                )
+                            }
+                        }
+
                         // "Send" action button when text exists
                         Text(
                             text = stringResource(id = R.string.send),
                             color = InstagramBlue,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Default,
                             modifier = Modifier
                                 .clickable(onClick = onSendClick)
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                .padding(start = 6.dp, end = 4.dp, top = 6.dp, bottom = 6.dp)
                                 .testTag("chat_send_button")
                         )
                     } else {
-                        // When text is empty, display: Mic, Gallery, Sticker, Plus
+                        // When text is empty, display: Mic, Gallery, System Emoji (Static), Plus
                         IconButton(
                             onClick = onMicClick,
                             modifier = Modifier
@@ -208,17 +270,17 @@ fun ChatInputBar(
                             )
                         }
 
-                        IconButton(
-                            onClick = onStickersClick,
+                        // Static system emoji icon matching Instagram native bar (No annoying toggle)
+                        Box(
                             modifier = Modifier
                                 .size(34.dp)
-                                .testTag("chat_sticker_button")
+                                .testTag("chat_sticker_static"),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.SentimentSatisfiedAlt,
-                                contentDescription = "Stickers",
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
+                            Text(
+                                text = "😀",
+                                fontSize = 20.sp,
+                                fontFamily = FontFamily.Default
                             )
                         }
 
@@ -240,4 +302,5 @@ fun ChatInputBar(
             }
         }
     }
+}
 }

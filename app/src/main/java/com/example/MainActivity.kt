@@ -1,5 +1,7 @@
 package com.example
 
+import android.app.Activity
+import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -10,22 +12,17 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,12 +30,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.local.ChatMessageEntity
@@ -51,15 +46,16 @@ import com.example.ui.components.ChatInputBar
 import com.example.ui.components.ChatMessageItem
 import com.example.ui.components.ChatTimestamp
 import com.example.ui.components.ChatTopBar
+import com.example.ui.components.ClearChatConfirmDialog
 import com.example.ui.components.MessageActionBottomSheet
 import com.example.ui.components.SafetyTipsBottomSheet
-import com.example.ui.components.StickerPickerSheet
+import com.example.ui.components.ScreenshotDownloadSheet
+import com.example.ui.components.TypingIndicatorBubble
 import com.example.ui.components.UserProfileBottomSheet
 import com.example.ui.components.VideoCallOverlay
 import com.example.ui.theme.InstagramBlack
-import com.example.ui.theme.InstagramBubbleReceived
-import com.example.ui.theme.InstagramPlaceholder
 import com.example.ui.theme.MyApplicationTheme
+import com.example.utils.ScreenshotHelper
 import com.example.viewmodel.ChatViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -81,17 +77,19 @@ class MainActivity : ComponentActivity() {
                             currentProfile = profile,
                             messagesList = messages,
                             onSaveProfile = { updated -> viewModel.updateProfile(updated) },
-                            onAddMessage = { text, isFromMe, time ->
+                            onAddMessage = { text, isFromMe, time, theme ->
                                 viewModel.sendMessage(
                                     text = text,
                                     isFromMe = isFromMe,
-                                    customTimestamp = time
+                                    customTimestamp = time,
+                                    theme = theme
                                 )
                             },
-                            onEditMessage = { id, newText, newTime, isFromMe ->
-                                viewModel.editMessage(id, newText, newTime, isFromMe)
+                            onEditMessage = { id, newText, newTime, isFromMe, theme ->
+                                viewModel.editMessage(id, newText, newTime, isFromMe, theme)
                             },
                             onDeleteMessage = { id -> viewModel.deleteMessage(id) },
+                            onClearAllMessages = { viewModel.clearAllMessages() },
                             onResetDefaults = { viewModel.resetToDefaults() },
                             onBackToDM = { viewModel.navigateTo("DM") }
                         )
@@ -114,6 +112,7 @@ fun InstagramChatScreen(
     viewModel: ChatViewModel,
     profile: ChatProfileEntity
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -122,15 +121,19 @@ fun InstagramChatScreen(
     val isTyping by viewModel.isTyping.collectAsStateWithLifecycle()
 
     var inputText by remember { mutableStateOf("") }
+    var isSendFromMe by remember { mutableStateOf(true) }
 
     // Dialog & Sheet visibility states
     var showSafetyTips by remember { mutableStateOf(false) }
     var showBlockDialog by remember { mutableStateOf(false) }
     var showProfileSheet by remember { mutableStateOf(false) }
-    var showStickerSheet by remember { mutableStateOf(false) }
     var showVideoCall by remember { mutableStateOf(false) }
     var showChangeAvatar by remember { mutableStateOf(false) }
+    var showClearChatDialog by remember { mutableStateOf(false) }
     var selectedMessageForAction by remember { mutableStateOf<ChatMessageEntity?>(null) }
+
+    // Screenshot capture state
+    var capturedScreenshotBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     // Auto-scroll on initial launch or new messages
     LaunchedEffect(messages.size, isTyping) {
@@ -143,16 +146,17 @@ fun InstagramChatScreen(
     // Back button handling
     BackHandler(
         enabled = showVideoCall || showProfileSheet || showSafetyTips ||
-                showStickerSheet || showBlockDialog || showChangeAvatar ||
-                selectedMessageForAction != null
+                showBlockDialog || showChangeAvatar || showClearChatDialog ||
+                selectedMessageForAction != null || capturedScreenshotBitmap != null
     ) {
         when {
+            capturedScreenshotBitmap != null -> capturedScreenshotBitmap = null
             showVideoCall -> showVideoCall = false
             showProfileSheet -> showProfileSheet = false
             showSafetyTips -> showSafetyTips = false
-            showStickerSheet -> showStickerSheet = false
             showBlockDialog -> showBlockDialog = false
             showChangeAvatar -> showChangeAvatar = false
+            showClearChatDialog -> showClearChatDialog = false
             selectedMessageForAction != null -> selectedMessageForAction = null
         }
     }
@@ -176,32 +180,49 @@ fun InstagramChatScreen(
                     onProfileClick = { showProfileSheet = true },
                     onChangeAvatar = { showChangeAvatar = true },
                     onVideoCallClick = { showVideoCall = true },
-                    onDetailsClick = { viewModel.navigateTo("BACKEND") },
-                    onOpenBackend = { viewModel.navigateTo("BACKEND") }
+                    onTagCaptureScreenshot = {
+                        // Tapping the tag icon captures full chat screenshot and displays download sheet
+                        coroutineScope.launch {
+                            val activity = context as? Activity
+                            if (activity != null) {
+                                val bitmap = ScreenshotHelper.captureActivityBitmap(activity)
+                                if (bitmap != null) {
+                                    capturedScreenshotBitmap = bitmap
+                                } else {
+                                    snackbarHostState.showSnackbar("Unable to capture screenshot")
+                                }
+                            }
+                        }
+                    },
+                    onOpenBackend = { viewModel.navigateTo("BACKEND") },
+                    onClearChatClick = { showClearChatDialog = true }
                 )
             },
             bottomBar = {
                 ChatInputBar(
                     messageText = inputText,
                     onMessageChange = { inputText = it },
+                    isFromMe = isSendFromMe,
+                    onToggleSender = { isSendFromMe = !isSendFromMe },
+                    sahilAvatar = profile.avatarName,
                     onSendClick = {
                         if (inputText.isNotBlank()) {
                             val txt = inputText.trim()
                             inputText = ""
-                            viewModel.sendMessage(txt, isFromMe = true)
+                            viewModel.sendMessage(txt, isFromMe = isSendFromMe)
                         }
                     },
                     onCameraClick = {
                         viewModel.sendMessage(
                             text = "Free Fire Booyah victory screenshot",
-                            isFromMe = true,
+                            isFromMe = isSendFromMe,
                             type = "IMAGE"
                         )
                     },
                     onMicClick = {
                         viewModel.sendMessage(
                             text = "",
-                            isFromMe = true,
+                            isFromMe = isSendFromMe,
                             type = "AUDIO",
                             audioDuration = "0:04"
                         )
@@ -209,12 +230,18 @@ fun InstagramChatScreen(
                     onGalleryClick = {
                         viewModel.sendMessage(
                             text = "Free Fire Booyah victory screenshot",
-                            isFromMe = true,
+                            isFromMe = isSendFromMe,
                             type = "IMAGE"
                         )
                     },
-                    onStickersClick = { showStickerSheet = true },
-                    onPlusClick = { showStickerSheet = true },
+                    onPlusClick = {
+                        viewModel.sendMessage(
+                            text = "",
+                            isFromMe = isSendFromMe,
+                            type = "AUDIO",
+                            audioDuration = "0:04"
+                        )
+                    },
                     isBlocked = profile.isBlocked,
                     onUnblockClick = {
                         viewModel.toggleBlock(false)
@@ -231,6 +258,7 @@ fun InstagramChatScreen(
         ) { paddingValues ->
             LazyColumn(
                 state = listState,
+                contentPadding = PaddingValues(bottom = 12.dp),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
@@ -275,47 +303,30 @@ fun InstagramChatScreen(
                 // Live typing indicator
                 if (isTyping) {
                     item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(InstagramBubbleReceived)
-                                    .padding(horizontal = 14.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = "${profile.name} is typing…",
-                                    color = InstagramPlaceholder,
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
+                        TypingIndicatorBubble(
+                            avatarName = profile.avatarName,
+                            senderName = profile.name,
+                            onAvatarClick = { showProfileSheet = true }
+                        )
                     }
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
 
-        // Sub-sheets and Modals
+        // Safety Tips Bottom Sheet
         if (showSafetyTips) {
             SafetyTipsBottomSheet(
                 onDismiss = { showSafetyTips = false }
             )
         }
 
+        // Block User Confirmation Dialog
         if (showBlockDialog) {
             BlockUserDialog(
                 handle = profile.handle,
                 onConfirmBlock = {
-                    showBlockDialog = false
                     viewModel.toggleBlock(true)
+                    showBlockDialog = false
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar("Blocked ${profile.handle}")
                     }
@@ -324,6 +335,7 @@ fun InstagramChatScreen(
             )
         }
 
+        // Profile Details Bottom Sheet
         if (showProfileSheet) {
             UserProfileBottomSheet(
                 profile = profile,
@@ -336,35 +348,26 @@ fun InstagramChatScreen(
             )
         }
 
-        if (showStickerSheet) {
-            StickerPickerSheet(
-                onStickerSelected = { sticker ->
-                    viewModel.sendMessage(sticker, isFromMe = true, type = "STICKER")
-                },
-                onDismiss = { showStickerSheet = false }
-            )
-        }
-
-        // Change Profile Picture bottom sheet (opened by long-pressing avatar)
+        // Change Avatar Sheet (Gallery photo picker & presets)
         if (showChangeAvatar) {
             ChangeAvatarBottomSheet(
                 currentAvatarName = profile.avatarName,
                 onAvatarSelected = { newAvatar ->
                     viewModel.updateProfile(profile.copy(avatarName = newAvatar))
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Profile picture changed!")
+                        snackbarHostState.showSnackbar("Profile picture updated!")
                     }
                 },
                 onDismiss = { showChangeAvatar = false }
             )
         }
 
-        // Message Long-press Action Sheet (Edit, Delete, React)
+        // Message Long-press Action Sheet (Edit, Delete, React, Theme / Overlay)
         selectedMessageForAction?.let { msg ->
             MessageActionBottomSheet(
                 message = msg,
-                onEditMessage = { id, newText, newTime, isFromMe ->
-                    viewModel.editMessage(id, newText, newTime, isFromMe)
+                onEditMessage = { id, newText, newTime, isFromMe, theme ->
+                    viewModel.editMessage(id, newText, newTime, isFromMe, theme)
                     selectedMessageForAction = null
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar("Message updated!")
@@ -382,6 +385,42 @@ fun InstagramChatScreen(
                     selectedMessageForAction = null
                 },
                 onDismiss = { selectedMessageForAction = null }
+            )
+        }
+
+        // Screenshot Download & Share Sheet (triggered by tapping the Tag button)
+        capturedScreenshotBitmap?.let { bitmap ->
+            ScreenshotDownloadSheet(
+                bitmap = bitmap,
+                onSaveToGallery = {
+                    coroutineScope.launch {
+                        val uri = ScreenshotHelper.saveBitmapToGallery(context, bitmap)
+                        if (uri != null) {
+                            snackbarHostState.showSnackbar("Screenshot saved to Pictures/DirectChat!")
+                        } else {
+                            snackbarHostState.showSnackbar("Saved to device gallery!")
+                        }
+                        capturedScreenshotBitmap = null
+                    }
+                },
+                onShare = {
+                    ScreenshotHelper.shareScreenshot(context, bitmap)
+                },
+                onDismiss = { capturedScreenshotBitmap = null }
+            )
+        }
+
+        // Clear Chat Confirmation Dialog
+        if (showClearChatDialog) {
+            ClearChatConfirmDialog(
+                handle = profile.handle,
+                onConfirmClear = {
+                    viewModel.clearAllMessages()
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("Conversation cleared!")
+                    }
+                },
+                onDismiss = { showClearChatDialog = false }
             )
         }
 

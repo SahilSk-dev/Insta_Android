@@ -6,7 +6,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -39,13 +37,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.R
 import com.example.ui.theme.InstagramBlack
 import com.example.ui.theme.InstagramRed
 import com.example.ui.theme.InstagramSubtext
@@ -98,13 +94,15 @@ fun VideoCallOverlay(
                     text = name,
                     color = Color.White,
                     fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Default
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = callStatus,
                     color = InstagramSubtext,
-                    fontSize = 15.sp
+                    fontSize = 15.sp,
+                    fontFamily = FontFamily.Default
                 )
             }
 
@@ -120,13 +118,10 @@ fun VideoCallOverlay(
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.1f))
                 )
-                Image(
-                    painter = painterResource(id = getAvatarResId(avatarName)),
+                RoundAvatar(
+                    avatarName = avatarName,
                     contentDescription = "Avatar",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(OctagonBadgeShape)
+                    size = 100.dp
                 )
             }
 

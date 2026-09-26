@@ -15,4 +15,3 @@ val InstagramBlueHover = Color(0xFF1877F2)
 val InstagramRed = Color(0xFFED4956)
 val InstagramDivider = Color(0xFF1A1A1A)
 val InstagramIconTint = Color(0xFFF5F5F5)
-

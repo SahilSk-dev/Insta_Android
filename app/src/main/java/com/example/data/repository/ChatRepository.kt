@@ -22,6 +22,10 @@ class ChatRepository(private val chatDao: ChatDao) {
         chatDao.updateMessage(message)
     }
 
+    suspend fun clearAllMessages() {
+        chatDao.clearAllMessages()
+    }
+
     suspend fun deleteMessage(id: String) {
         chatDao.deleteMessageById(id)
     }
@@ -31,8 +35,8 @@ class ChatRepository(private val chatDao: ChatDao) {
         chatDao.insertOrUpdateProfile(
             ChatProfileEntity(
                 id = 1,
-                name = "Sahil Sk",
-                handle = "md.sahil_sk_",
+                name = "Sahil",
+                handle = "not__ur__sahil_77",
                 joinedDate = "Joined Oct 2025",
                 followersCount = "108",
                 postsCount = "1",
@@ -42,18 +46,67 @@ class ChatRepository(private val chatDao: ChatDao) {
                 bio = "🎮 Free Fire MAX Esports Player 🔥\n⚡ Headshot machine | 1v1 Room Challenge\n🏆 Guild Leader #Booyah",
                 chatTimestamp = "12:41 PM",
                 isBlocked = false,
-                autoReplyEnabled = true
+                autoReplyEnabled = false
             )
         )
-        chatDao.insertMessage(
+        val defaultMessages = listOf(
             ChatMessageEntity(
-                id = "init_1",
-                text = "Hello",
+                id = "msg-1",
+                text = "Hello Sahil bhai! Kemon acho? Free Fire MAX khelbe aaj?",
                 isFromMe = true,
                 timestamp = "12:41 PM",
                 type = "TEXT",
+                theme = "CLASSIC",
                 orderIndex = 1L
+            ),
+            ChatMessageEntity(
+                id = "msg-2",
+                text = "Arey bhai! Ekdom bhalo achi. Aajke rank push korbo, squad ready ache! 🔥🎮",
+                isFromMe = false,
+                timestamp = "12:41 PM",
+                type = "TEXT",
+                theme = "OBSIDIAN_HEART",
+                orderIndex = 2L
+            ),
+            ChatMessageEntity(
+                id = "msg-3",
+                text = "Free Fire Booyah victory screenshot",
+                isFromMe = false,
+                timestamp = "12:42 PM",
+                type = "IMAGE",
+                imageResName = "gaming_post",
+                theme = "CLASSIC",
+                orderIndex = 3L
+            ),
+            ChatMessageEntity(
+                id = "msg-4",
+                text = "",
+                isFromMe = false,
+                timestamp = "12:42 PM",
+                type = "AUDIO",
+                audioDuration = "0:04",
+                theme = "CLASSIC",
+                orderIndex = 4L
+            ),
+            ChatMessageEntity(
+                id = "msg-5",
+                text = "Tumi amar moner majhe ekla projapoti 🦋✨",
+                isFromMe = true,
+                timestamp = "12:43 PM",
+                type = "TEXT",
+                theme = "MIDNIGHT_BUTTERFLY",
+                orderIndex = 5L
+            ),
+            ChatMessageEntity(
+                id = "msg-6",
+                text = "🔥",
+                isFromMe = false,
+                timestamp = "12:43 PM",
+                type = "STICKER",
+                theme = "CLASSIC",
+                orderIndex = 6L
             )
         )
+        defaultMessages.forEach { chatDao.insertMessage(it) }
     }
 }

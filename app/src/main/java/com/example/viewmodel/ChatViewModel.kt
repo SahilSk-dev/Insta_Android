@@ -7,6 +7,7 @@ import com.example.data.local.AppDatabase
 import com.example.data.local.ChatMessageEntity
 import com.example.data.local.ChatProfileEntity
 import com.example.data.repository.ChatRepository
+import com.example.ui.components.EmojiHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,12 +34,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val sahilResponses = listOf(
         "Arey bhai! Kaise ho?",
-        "Free Fire MAX me rank push karoge aaj?",
-        "1v1 custom room challenge accepted! 🎮🔥",
-        "Aaj Booyah confirm hai bro!",
-        "Haan bolo bhai, sab theek?",
-        "Squad full hone wala hai, jaldi aao!",
-        "Headshot sensitivity settings share karu kya? 🎯"
+        "Free Fire MAX me rank push karoge aaj? 🔥",
+        "1v1 custom room challenge accepted! 🎮👑",
+        "Aaj Booyah confirm hai bro! 💯",
+        "Haan bolo bhai, sab theek? 😎",
+        "Squad full hone wala hai, jaldi aao! 🚀",
+        "Headshot sensitivity settings share karu kya? 🎯⚡"
     )
     private var responseIndex = 0
 
@@ -70,10 +71,26 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 )
             )
 
-        // Seed initial data if empty
+        // Seed initial data if empty or migrate
         viewModelScope.launch {
             repository.profile.collect { p ->
                 if (p == null) {
+                    repository.resetToDefault()
+                } else if (p.name != "Sahil" || p.autoReplyEnabled) {
+                    repository.saveProfile(
+                        p.copy(
+                            name = "Sahil",
+                            handle = "not__ur__sahil_77",
+                            autoReplyEnabled = false
+                        )
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            repository.messages.collect { msgList ->
+                if (msgList.isEmpty() || (msgList.size == 1 && msgList.first().id == "init_1")) {
                     repository.resetToDefault()
                 }
             }
@@ -103,46 +120,33 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         type: String = "TEXT",
         imageResName: String? = null,
         audioDuration: String? = null,
+        theme: String = "CLASSIC",
         customTimestamp: String? = null
     ) {
         val currentProfile = profile.value
         if (currentProfile.isBlocked && isFromMe) return
 
         val time = customTimestamp ?: getCurrentTimeString()
-        val msg = ChatMessageEntity(
-            text = text,
-            isFromMe = isFromMe,
-            timestamp = time,
-            type = type,
-            imageResName = imageResName,
-            audioDuration = audioDuration,
-            orderIndex = System.currentTimeMillis()
-        )
+        val isPureEmoji = EmojiHelper.isPureEmojiString(text.trim())
+        val messageType = if (isPureEmoji && type == "TEXT") "STICKER" else type
 
         viewModelScope.launch {
+            val msg = ChatMessageEntity(
+                text = text,
+                isFromMe = isFromMe,
+                timestamp = time,
+                type = messageType,
+                imageResName = imageResName,
+                audioDuration = audioDuration,
+                theme = theme,
+                orderIndex = System.currentTimeMillis()
+            )
+
             repository.addMessage(msg)
-
-            if (isFromMe && currentProfile.autoReplyEnabled) {
-                delay(800)
-                _isTyping.value = true
-                delay(1400)
-                _isTyping.value = false
-
-                val replyText = sahilResponses[responseIndex % sahilResponses.size]
-                responseIndex++
-                val replyMsg = ChatMessageEntity(
-                    text = replyText,
-                    isFromMe = false,
-                    timestamp = getCurrentTimeString(),
-                    type = "TEXT",
-                    orderIndex = System.currentTimeMillis()
-                )
-                repository.addMessage(replyMsg)
-            }
         }
     }
 
-    fun editMessage(id: String, newText: String, newTimestamp: String, isFromMe: Boolean) {
+    fun editMessage(id: String, newText: String, newTimestamp: String, isFromMe: Boolean, theme: String = "CLASSIC") {
         viewModelScope.launch {
             val existing = messages.value.find { it.id == id }
             if (existing != null) {
@@ -150,10 +154,17 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     existing.copy(
                         text = newText,
                         timestamp = newTimestamp,
-                        isFromMe = isFromMe
+                        isFromMe = isFromMe,
+                        theme = theme
                     )
                 )
             }
+        }
+    }
+
+    fun clearAllMessages() {
+        viewModelScope.launch {
+            repository.clearAllMessages()
         }
     }
 
