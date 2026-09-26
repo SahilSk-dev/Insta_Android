@@ -24,11 +24,7 @@ import com.example.R
 import java.io.File
 
 fun getAvatarResId(avatarName: String?): Int {
-    return when (avatarName) {
-        "avatar_cyber_samurai" -> R.drawable.avatar_cyber_samurai
-        "avatar_gold_tiger" -> R.drawable.avatar_gold_tiger
-        else -> R.drawable.sahil_avatar
-    }
+    return R.drawable.sahil_avatar
 }
 
 data class AvatarOption(
@@ -38,9 +34,7 @@ data class AvatarOption(
 )
 
 val availableAvatars = listOf(
-    AvatarOption("sahil_avatar", "Default Avatar", R.drawable.sahil_avatar),
-    AvatarOption("avatar_cyber_samurai", "Cyber Ninja", R.drawable.avatar_cyber_samurai),
-    AvatarOption("avatar_gold_tiger", "Golden Flame Tiger", R.drawable.avatar_gold_tiger)
+    AvatarOption("sahil_avatar", "Sahil Sk", R.drawable.sahil_avatar)
 )
 
 /**
