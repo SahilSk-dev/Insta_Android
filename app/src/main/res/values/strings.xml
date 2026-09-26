@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Direct Chat</string>
+    <string name="contact_name">Sahil Sk</string>
+    <string name="contact_handle">md.sahil_sk_</string>
+    <string name="joined_date">Joined Oct 2025</string>
+    <string name="followers_posts">108 followers · 1 post</string>
+    <string name="follows_you">Follows you</string>
+    <string name="mutual_follow">You both follow __broken__heart__019</string>
+    <string name="safety_tips">Safety tips</string>
+    <string name="block">Block</string>
+    <string name="message_placeholder">Message…</string>
+    <string name="send">Send</string>
+    <string name="blocked_message">You have blocked md.sahil_sk_</string>
+    <string name="unblock">Unblock</string>
+</resources>
