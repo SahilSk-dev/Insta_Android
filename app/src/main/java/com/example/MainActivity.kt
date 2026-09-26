@@ -204,6 +204,7 @@ fun InstagramChatScreen(
                     onMessageChange = { inputText = it },
                     isFromMe = isSendFromMe,
                     onToggleSender = { isSendFromMe = !isSendFromMe },
+                    contactName = profile.name,
                     sahilAvatar = profile.avatarName,
                     onSendClick = {
                         if (inputText.isNotBlank()) {
@@ -366,6 +367,7 @@ fun InstagramChatScreen(
         selectedMessageForAction?.let { msg ->
             MessageActionBottomSheet(
                 message = msg,
+                contactName = profile.name,
                 onEditMessage = { id, newText, newTime, isFromMe, theme ->
                     viewModel.editMessage(id, newText, newTime, isFromMe, theme)
                     selectedMessageForAction = null

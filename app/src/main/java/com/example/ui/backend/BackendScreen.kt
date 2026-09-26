@@ -619,7 +619,7 @@ fun BackendScreen(
                                     onClick = { newMsgSenderMe = false },
                                     colors = RadioButtonDefaults.colors(selectedColor = InstagramBlue)
                                 )
-                                Text("Sahil Sk (Dark)", color = Color.White, fontSize = 13.sp, fontFamily = FontFamily.Default)
+                                Text("${name.ifBlank { "Contact" }} (Dark)", color = Color.White, fontSize = 13.sp, fontFamily = FontFamily.Default)
                             }
                         }
 

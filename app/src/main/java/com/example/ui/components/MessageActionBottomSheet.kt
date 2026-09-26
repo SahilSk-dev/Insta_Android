@@ -56,6 +56,7 @@ import com.example.ui.theme.InstagramSubtext
 @Composable
 fun MessageActionBottomSheet(
     message: ChatMessageEntity,
+    contactName: String = "Sahil",
     onEditMessage: (id: String, newText: String, newTimestamp: String, isFromMe: Boolean, theme: String) -> Unit,
     onDeleteMessage: (id: String) -> Unit,
     onReactEmoji: (String) -> Unit,
@@ -217,7 +218,7 @@ fun MessageActionBottomSheet(
                 // Action: Switch sender (Me <-> Them)
                 ActionRowItem(
                     icon = Icons.Default.SwapHoriz,
-                    label = if (message.isFromMe) "Change Sender to Sahil Sk" else "Change Sender to You",
+                    label = if (message.isFromMe) "Change Sender to $contactName" else "Change Sender to You",
                     textColor = Color.White,
                     onClick = {
                         onEditMessage(message.id, message.text, message.timestamp, !message.isFromMe, message.theme)

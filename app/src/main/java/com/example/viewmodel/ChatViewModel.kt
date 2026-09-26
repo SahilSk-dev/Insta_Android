@@ -76,11 +76,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             repository.profile.collect { p ->
                 if (p == null) {
                     repository.resetToDefault()
-                } else if (p.name != "Sahil" || p.autoReplyEnabled) {
+                } else if (p.name.isBlank() || p.name.contains("🦋")) {
                     repository.saveProfile(
                         p.copy(
                             name = "Sahil",
-                            handle = "not__ur__sahil_77",
+                            handle = if (p.handle.isBlank() || p.handle == "md.sahil_sk_") "not__ur__sahil_77" else p.handle,
                             autoReplyEnabled = false
                         )
                     )

@@ -56,6 +56,7 @@ fun ChatInputBar(
     onSendClick: () -> Unit,
     isFromMe: Boolean = true,
     onToggleSender: () -> Unit = {},
+    contactName: String = "Sahil",
     sahilAvatar: String = "sahil_avatar",
     onCameraClick: () -> Unit,
     onMicClick: () -> Unit,
@@ -214,12 +215,12 @@ fun ChatInputBar(
                             } else {
                                 RoundAvatar(
                                     avatarName = sahilAvatar,
-                                    contentDescription = "Sahil",
+                                    contentDescription = contactName,
                                     size = 14.dp
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text(
-                                    text = "Sahil",
+                                    text = contactName,
                                     color = Color.White,
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.SemiBold,
