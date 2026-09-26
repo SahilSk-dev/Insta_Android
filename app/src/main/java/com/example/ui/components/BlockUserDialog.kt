@@ -39,7 +39,7 @@ import com.example.ui.theme.InstagramSubtext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BlockUserDialog(
-    handle: String = "md.sahil_sk_",
+    handle: String = "not__ur__sahil_77",
     onConfirmBlock: () -> Unit,
     onDismiss: () -> Unit
 ) {

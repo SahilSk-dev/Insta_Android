@@ -511,7 +511,7 @@ fun BackendScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Block md.sahil_sk_", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Default)
+                                Text("Block $handle", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Default)
                                 Text("Toggle block status in DM interface", color = InstagramSubtext, fontSize = 12.sp, fontFamily = FontFamily.Default)
                             }
                             Switch(
